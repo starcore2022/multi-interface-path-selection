@@ -18,9 +18,9 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(unique_topic_flow_interface
   "msg/Serialized.msg"
-  "msg/MOS.msg"
+  #"msg/MOS.msg"
   "msg/Locator.msg"
-  "msg/Throttle.msg"
+  #"msg/Throttle.msg"
   "msg/TunnelSelect.msg"
   "msg/CoeffForTopic.msg"
   "msg/UniqueTopicFlow.msg"
@@ -38,16 +38,19 @@ target_link_libraries(subscriber_discovery fastcdr fastrtps)
 
 add_executable(unique_flow_topic_relay src/relay.cpp)
 add_executable(unique_flow_topic_relay_endpoint src/relay_endpoint.cpp)
+add_executable(unique_flow_topic_relay_endpoint_namespace src/relay_endpoint_namespace.cpp)
 
 ament_target_dependencies(unique_flow_topic_relay rclcpp)
 ament_target_dependencies(unique_flow_topic_relay_endpoint rclcpp)
+ament_target_dependencies(unique_flow_topic_relay_endpoint_namespace rclcpp)
 rosidl_get_typesupport_target(cpp_typesupport_target unique_topic_flow_interface "rosidl_typesupport_cpp")
 target_link_libraries(unique_flow_topic_relay subscriber_discovery "${cpp_typesupport_target}")
 target_link_libraries(unique_flow_topic_relay_endpoint "${cpp_typesupport_target}")
+target_link_libraries(unique_flow_topic_relay_endpoint_namespace "${cpp_typesupport_target}")
 
 # Install nodes
 install(
-  TARGETS unique_flow_topic_relay unique_flow_topic_relay_endpoint subscriber_discovery
+  TARGETS unique_flow_topic_relay unique_flow_topic_relay_endpoint unique_flow_topic_relay_endpoint_namespace subscriber_discovery
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
