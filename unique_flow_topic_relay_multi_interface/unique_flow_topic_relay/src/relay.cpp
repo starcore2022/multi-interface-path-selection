@@ -9,7 +9,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "subscriber_discovery.h"
-#include "unique_flow_topic_relay/msg/throttle.hpp"
+//#include "unique_flow_topic_relay/msg/throttle.hpp"
 #include "unique_flow_topic_relay/msg/tunnel_select.hpp"
 #include "unique_flow_topic_relay/msg/unique_topic_flow.hpp"
 #include "unique_flow_topic_relay/msg/unique_topic_flow_stats.hpp"
@@ -120,7 +120,7 @@ class UFTopicRelay : public rclcpp::Node {
     
     DiscoveryListener sub_listener;
     
-    rclcpp::Subscription<Throttle>::SharedPtr throttle_sub; 
+    //rclcpp::Subscription<Throttle>::SharedPtr throttle_sub; 
     rclcpp::Subscription<TunnelSelect>::SharedPtr select_sub; 
 
     
@@ -147,7 +147,7 @@ public:
 
         discovery_timer = this->create_wall_timer(discovery_period, std::bind(&UFTopicRelay::make_subscribe_unsubscribe_decisions, this));
         
-        throttle_sub = this->create_subscription<Throttle>("throttle", 10, std::bind(&UFTopicRelay::process_throttle_message, this, std::placeholders::_1));
+        //throttle_sub = this->create_subscription<Throttle>("throttle", 10, std::bind(&UFTopicRelay::process_throttle_message, this, std::placeholders::_1));
         
         if(use_serialized_tunnel && split_tunnel_suffixes.size() > 1){   
             select_sub = this->create_subscription<TunnelSelect>("select", 10, std::bind(&UFTopicRelay::process_select_message, this, std::placeholders::_1));   
@@ -577,17 +577,17 @@ private:
         }
     }
     
-    void process_throttle_message(Throttle::SharedPtr msg){
-        for(auto& relayp: relays){
-            auto& relay = *relayp;
-            if(relay.info.output_topic == msg->topic){
-                RCLCPP_INFO(this->get_logger(), "Setting throttle data for %s:\ndrop_every_nth:%d, message_delay:%d",msg->topic.c_str(),msg->drop_every_nth, msg->message_delay);
-                // Maybe needs a mutex :MaybeMutex
-                relay.drop_every_nth = msg->drop_every_nth;
-                relay.delay_target = msg->message_delay;
-            }
-        }
-    }
+    // void process_throttle_message(Throttle::SharedPtr msg){
+    //     for(auto& relayp: relays){
+    //         auto& relay = *relayp;
+    //         if(relay.info.output_topic == msg->topic){
+    //             RCLCPP_INFO(this->get_logger(), "Setting throttle data for %s:\ndrop_every_nth:%d, message_delay:%d",msg->topic.c_str(),msg->drop_every_nth, msg->message_delay);
+    //             // Maybe needs a mutex :MaybeMutex
+    //             relay.drop_every_nth = msg->drop_every_nth;
+    //             relay.delay_target = msg->message_delay;
+    //         }
+    //     }
+    // }
     
     void process_select_message(TunnelSelect::SharedPtr msg){
         if(msg->select > split_tunnel_suffixes.size()){
