@@ -1,16 +1,121 @@
-# unique_flow_topic_relay
+# Improved unique_flow_topic_relay_endpoint
+
+ROS2 package for relaying and tunneling ROS2 topics, that can get statistics, unique flow information about the topics, and can split and merge a topic into multiple tunnels with way to select between them. It has been improved to use ROS2 TCP Tunnel to send messages and make use of multiple interfaces for path switching.
+
+The [support for middleware](#unique_flow_topic_relay) is the same. The usage is mostly the same, there new launch YAML files, that starts the new version of the relay endpoint and uses turtlesim for the publishing node for the relay. The main changes involve the relay endpoint, which has to find the demultiplexed topics tunneled through TCP.
+
+
+## Usage
+
+
+Uses unique_flow_topic_relay and unique_flow_topic_relay_endpoint node.
+
+By setting the split_tunnel_suffixes parameter of unique_flow_topic_relay and relay_endpoint_namespaces it creates multiple tunnels for every topic. The suffixes get appended to the topic names.
+
+This is useful if you take the unique flow information for every tunnel and the tunnels get different QoS in the underlying network layer, independent of ROS2 QoS-s. The unique_flow_topic_relay subscribes to a /select topic that selects which tunnel of the topic the data goes through. This facilitates faster switching of network QoS-s.
+
+For usage with ROS2 TCP Tunnel server-client, the relay_endpoint_namespaces also takes topic prefixes (namespaces) beside the suffixes. The suffixes are '_ETH' and '_5G' instead of '_1' and '_2'.
+This was done to more easily differentiate between paths, by what interface was used to tunnel it from the publisher machine to the subscriber machine.
+
+The node also collects and publishes statistics on the subscribed topics. The following statistics are published on the unique_topic_flow_stats topic:
+
+-   topic  Name of the topic
+-   start  When it started publishing
+-   num_messages  Number of messages since start
+-   num_bytes  Sent bytes since start
+-   window_duration_secs  Length of window in seconds
+-   window_bandwidth  Bandwidth used during window
+-   window_rate  Rate of messages in window
+-   window_average_delta  Average time between messages in window
+
+### Example for starting the relay and relay_endpoint
+The relay uses Turtlesim for publisher and the topic that is demultiplexed is the /Pose topic of the /turtle1 namespace.
+```
+ros2 launch unique_flow_topic_relay test_topic_tcp_tunnel_client_turtlesim.launch.yaml
+```
+
+Subscriber is node is not launched by the YAML file. For quick testing the topic can be echoed using:
+```
+ros2 topic echo /pose_fromuf
+```
+
+### Parameters of unique_flow_topic_relay_endpoint_namespaces:
+
+-   discovery_period  How often new subscribers get discovered, and statistics published
+-   topic_names  Optional list of topics, that the node publishes to.
+-   from_uf_name  This string is searched in topic names to find topics the node publishes to.
+ -   uf_name  This string replaces  from_uf_name in the topic names for the subscribed topic name.
+-   split_tunnel_suffixes  This string array is treated as suffixes for the topics to subscribe to the demultiplexed tunneled topics and publishes them as topic_names + uf_name.
+-   namespaces This string array is treated as namespace prefixes for the topics to subscribe to the tunneled demultiplexed topics.
+
+## Demos and example
+
+### Example
+After sourcing everything:
+```
+    #PC1
+    ros2 launch unique_flow_topic_relay test_topic_tcp_tunnel_server_turtlesim.launch.yaml
+    
+    ros2 run tcp_tunnel ros2_tcp_tunnel_service_server /pose_5G wlp  --ros-args -r __ns:=/pose_5G
+    ros2 run tcp_tunnel ros2_tcp_tunnel_service_server /pose_ETH enp  --ros-args -r __ns:=/pose_ETH
+    
+
+    #PC2
+    ros2 run tcp_tunnel ros2_tcp_tunnel_service_client /pose_5G wlp  --ros-args -r __ns:=/pose_5G
+    ros2 run tcp_tunnel ros2_tcp_tunnel_service_client /pose_ETH enx  --ros-args -r __ns:=/pose_ETH
+
+    ros2 service call /pose_5G/tcp_tunnel_client/add_topic tcp_tunnel/srv/AddTopic "topic:
+    data: '/pose_5G'
+    tunnel_queue_size:
+    data: '2'
+    server_namespace:
+    data: '/pose_5G'
+    interface:
+    data: 'wlp'"
+
+    ros2 service call /pose_ETH/tcp_tunnel_client/add_topic tcp_tunnel/srv/AddTopic "topic:
+    data: '/pose_ETH'
+    tunnel_queue_size:
+    data: '2'
+    server_namespace:
+    data: '/pose_ETH'
+    interface:
+    data: 'enx'"
+
+    ros2 launch unique_flow_topic_relay  test_topic_tunnel_split.launch.yaml
+
+    ros2 topic echo /unique_topic_flow  
+    ros2 topic echo /pose_fromuf  turtlesim/msg/Pose
+    
+    
+    #PC1
+    python3 topic_watcher_path_selector_using_stats.py
+```
+### ROS2 TCP Tunnel server side
+
+[![A Solution for Multipath Channel Switching in ROS2 With 3GPP Integration](https://img.youtube.com/vi/g4lqaNn3j1Q/0.jpg)](https://youtu.be/g4lqaNn3j1Q "A Solution for Multipath Channel Switching in ROS2 With 3GPP Integration")
+
+
+### ROS2 TCP Tunnel client side
+
+[![A Solution for Multipath Channel Switching in ROS2 With 3GPP Integration cont.](https://img.youtube.com/vi/wyxSVCpNX_s/0.jpg)](https://youtu.be/wyxSVCpNX_s "A Solution for Multipath Channel Switching in ROS2 With 3GPP Integration cont.")
+
+---
+
+# Original documentation
+## unique_flow_topic_relay
 
 ROS2 package for relaying and tunneling ROS2 topics, that can get statistics, unique flow information about the topics, and can split and merge a topic into multiple tunnels with way to select between them.
 
 Only supports fastdds middleware (it has unique flow support and  getting subscriber port information).
 
-# Usage
+## Usage
 
-## Get unique flow information and statistics for any topic
+### Get unique flow information and statistics for any topic
 
 Needs only unique_flow_topic_relay node.
 
-![Basic usage](/docs/basic.png)
+![Basic usage](/unique_flow_topic_relay_multi_interface/docs/basic.png)
 
 Subscribes to one or multiple topics and republishes them to a topic where both the sending and receiving ip:port information are known and  publishes this information to a topic: unique_topic_flow.  It’s recommended that all relays publish to the same topic.
 
@@ -30,7 +135,7 @@ The node also collects and publishes statistics on the subscribed topics. The fo
 
 The default window size is 100 messages.
 
-### Parameters of unique_flow_topic_relay:
+#### Parameters of unique_flow_topic_relay:
 
 -   discovery_period  How often new subscribers get discovered, and statistics published
 -   topic_names  Optional list of topics, that the node subscribes to.
@@ -55,11 +160,11 @@ Runs a relay that subscribes to /chatter_touf and publishes /chatter.
 This demo disables fastrtps’s shared memory optimalization, making it possible to run the demo on one host. For use cases where the publisher and subscriber are not on the same host, it can be enabled.  
 See FASTRTPS_DEFAULT_PROFILES_FILE in launch.yaml.
 
-## Throttle mode
+### Throttle mode
 
 Uses unique_flow_topic_relay.
 
-![Throttle usage](/docs/throttle.png)
+![Throttle usage](/unique_flow_topic_relay_multi_interface/docs/throttle.png)
 
 You can send Throttle messages to the relay’s /throttle topic, that can set 2 parameters of every subscribed and published topic.
 
@@ -69,7 +174,7 @@ You can send Throttle messages to the relay’s /throttle topic, that can set 2 
 
 This can be used to emulate latency and droprate of a network connection.
 
-### Demo and example:
+#### Demo and example:
 
 After sourcing the workspace:
 
@@ -79,11 +184,11 @@ After sourcing the workspace:
 
 This demonstrates, that after publishing the message to the /throttle topic the subscriber to the /chatter topic only gets every second message.
 
-## Get extra statistics with a tunnel
+### Get extra statistics with a tunnel
 
 Uses unique_flow_topic_relay and unique_flow_topic_relay_endpoint node.
 
-![Tunnel usage](/docs/tunnel.png)
+![Tunnel usage](/unique_flow_topic_relay_multi_interface/docs/tunnel.png)
 
 By setting the use_serialized_tunnel parameter of unique_flow_topic_relay it creates a tunnel for every subscribed topic. This tunnel is using serialized messages with extra information to make computing latency and droprate possible. Every message gets a sent timestamp and a sequence number.
 
@@ -97,7 +202,7 @@ The endpoint doesn’t publish unique flow information.
 
 The endpoint doesn’t subscribe to anything until it notices that some node subscribed to a topic it publishes.
 
-### Parameters of unique_flow_topic_relay_endpoint:
+#### Parameters of unique_flow_topic_relay_endpoint:
 
 -   discovery_period  How often new subscribers get discovered, and statistics published
 -   topic_names  Optional list of topics, that the node publishes to.
@@ -106,7 +211,7 @@ The endpoint doesn’t subscribe to anything until it notices that some node sub
     
 If topic_names is empty the node publishes to all topics that have from_uf_name  in them.
 
-### Demo and example:
+#### Demo and example:
 
 After sourcing the workspace:
 
@@ -119,17 +224,17 @@ Runs a relay that subscribes to /chatter_touf and publishes /chatter with Serial
 This demo disables fastrtps’s shared memory optimalization, making it possible to run the demo on one host. For use cases where the publisher and subscriber are not on the same host, it can be enabled.  
 See FASTRTPS_DEFAULT_PROFILES_FILE in launch.yaml.
 
-## Use multiple tunnels per topic
+### Use multiple tunnels per topic
 
 Uses unique_flow_topic_relay and unique_flow_topic_relay_endpoint node.
 
-![Tunnel usage](/docs/tunnel.png)
+![Tunnel usage](/unique_flow_topic_relay_multi_interface/docs/tunnel.png)
 
 By setting the split_tunnel_suffixes parameter of unique_flow_topic_relay and relay_endpoint it creates multiple tunnels for every topic. The suffixes get appended to the topic names.
 
 This is useful if you take the unique flow information for every tunnel and the tunnels get different QoS in the underlying network layer, independent of ROS2 QoS-s. The unique_flow_topic_relay subscribes to a /select topic that selects which tunnel of the topic the data goes through. This facilitates faster switching of network QoS-s.
 
-### Demo and example:
+#### Demo and example:
 
 After sourcing the workspace:
 
@@ -143,7 +248,7 @@ Runs a relay that subscribes to /chatter_touf and publishes /chatter_1 and /chat
 This demo disables fastrtps’s shared memory optimalization, making it possible to run the demo on one host. For use cases where the publisher and subscriber are not on the same host, it can be enabled.  
 See FASTRTPS_DEFAULT_PROFILES_FILE in launch.yaml.
 
-# Description
+## Description
 
 The relay works by checking available topics every discovery_period (make_subscribe_unsubscribe_decisions()). It checks all topics ROS knows about if it's interested in it. Is it in topic_names, does it contain to_uf_name? If the topic is relevant and there is a publisher for it (try_discover_source()), it checks if it’s already relayed. If not or the topic has QoS changes, the node creates a RelayData  for that topic. The RelayData  has a Generic Subscriber and Publisher for the topic. The Publisher is created with RMW_UNIQUE_NETWORK_FLOW_ENDPOINTS_OPTIONALLY_REQUIRED.  The published topic name is generated by string replacing to_uf_name with uf_name. The node also registers the topic with Subscriber Discovery.  
 After the topic checks are done, the node handles publishing the new unique flow messages (publish_unique_topic_flow_msgs()). The RelayData  has the Publisher for every relayed topic, so the source information is available. The topic was registered with Subscriber Discovery that returns changes since the last time it was called (get_subscriber_changes()). The changes contain the destination information. All information for the flow is available, so it is published. The source can contain 0.0.0.0 as the source ip, in this case a flow message is created for all network interface with an ip. These messages will have the same source port, destination ip and port, but the source ip will have the ips of the network interfaces.
@@ -153,10 +258,11 @@ The relay has the same callback for all Subscribers (process_message_and_measure
 Tunneling is handled, that instead of publishing the same topic type it Subscribed, the message is packaged into a Serialized message as a byte\[] with extra information: sending time and sequence number. This allows the measurement of delay and droprate.
 
 The relay endpoint is like the relay, but simplified as it only handles subscribing to Serialized messages, doesn’t throttle, and only collects delay and droprate statistics.  
-It works by checking if there are subscribers for its configured topics (topic_names, from_uf_name) )(try_discover_drain()). If there are, it generates the topic name to subscribe to by replacing from_uf_name with uf_name. It subscribes to that Serialized topic and will create a Generic Publisher to publish the payload message  with the type it was subscribed to  at the start.  The subscription callback also handles computing statistics.
+It works by checking if there are subscribers for its configured topics (topic_names, from_uf_name)(try_discover_drain()). If there are, it generates the topic name to subscribe to by replacing from_uf_name with uf_name. It subscribes to that Serialized topic and will create a Generic Publisher to publish the payload message  with the type it was subscribed to  at the start.  The subscription callback also handles computing statistics.
 
-# Possible improvements
+## Possible improvements
 
 -   Only FastDDS Subscriber Discovery is implemented.
 -   Possibly make statistics collecting optional.
 -   Unique flow information is only published if there was a change (new topic, or topic stopped), make a Service that can be used to get the current state.
+
