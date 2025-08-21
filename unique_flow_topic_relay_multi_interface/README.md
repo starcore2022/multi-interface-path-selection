@@ -2,7 +2,7 @@
 
 These set of ROS2 nodes explores the potential for making the use of 3GPP TS 23.434 SEAL (Service Enabler Architecture Layer) even easier and more automatic in various industry verticals applying ROS2 for their operation. The proposed solution involves implementing a mapping node that converts ROS2 settings to 3GPP SEAL requests, as well as an information collecting proxy node. 
 
-![Basic architecture](/docs/chatter.png)
+![Basic architecture](docs/chatter.png)
 
 We cover three SEAL functionalities: 
 -   group management
@@ -20,6 +20,20 @@ After sourcing the workspace
 	ros2 launch unique_flow_topic_relay test_topic.launch.yaml
 	ros2 run seal topic_watcher
 	ros2 topic echo /chatter
+
+## Updated usage to make use of multiple interfaces for path selection
+After sourcing the workspace
+```
+	ros2 launch unique_flow_topic_relay test_topic_tcp_tunnel_server_turtlesim.launch.yaml
+  
+  # Omitted the ROS2 TCP Tunnel setup part
+  
+  ros2 launch unique_flow_topic_relay  test_topic_tunnel_split.launch.yaml
+	ros2 run seal topic_watcher_path_selector_using_stats #or use: python3 topic_watcher_path_selector_using_stats.py
+  ros2 topic echo /pose_fromuf  turtlesim/msg/Pose
+
+  ros2 topic echo /pose_fromuf  #works too, just the terminal will not be as readable
+```
 
 # Citation
 [G. Szabó, "Towards The Automatic Network Resource Management of Robot Operating System In Programmable Mobile Networks," in IEEE Access, doi: 10.1109/ACCESS.2023.3289922.](https://ieeexplore.ieee.org/document/10164106)

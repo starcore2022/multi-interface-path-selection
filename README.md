@@ -283,7 +283,7 @@ ros2 launch unique_flow_topic_relay test_topic_tcp_tunnel_client_turtlesim.launc
 
 Terminal 6:
 ```
-ros2 topic echo /pose_fromuf
+ros2 topic echo /pose_fromuf turtlesim/msg/Pose
 ```
 
 
