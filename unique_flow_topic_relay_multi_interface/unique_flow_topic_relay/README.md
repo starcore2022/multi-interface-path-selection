@@ -100,7 +100,7 @@ After sourcing everything:
 
 [![A Solution for Multipath Channel Switching in ROS2 With 3GPP Integration cont.](https://img.youtube.com/vi/wyxSVCpNX_s/0.jpg)](https://youtu.be/wyxSVCpNX_s "A Solution for Multipath Channel Switching in ROS2 With 3GPP Integration cont.")
 
-
+---
 
 # Original documentation
 ## unique_flow_topic_relay
